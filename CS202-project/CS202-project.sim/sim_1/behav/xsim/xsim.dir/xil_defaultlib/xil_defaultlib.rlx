@@ -1,0 +1,10 @@
+0.6
+2018.3
+Dec  7 2018
+00:33:28
+D:/XilinxProject/CS202-Project/CS202-project/CS202-project.sim/sim_1/behav/xsim/glbl.v,1544155481,verilog,,,,glbl,,,,,,,,
+D:/XilinxProject/CS202-Project/CS202-project/CS202-project.sim/sim_decoder.v,1684034426,verilog,,,,sim_decoder,,,,,,,,
+D:/XilinxProject/CS202-Project/CS202-project/CS202-project.sim/sim_executs32.v,1651330747,verilog,,,,sim_executs32,,,,,,,,
+D:/XilinxProject/CS202-Project/CS202-project/CS202-project.srcs/sources_1/new/Executs32.v,1683999366,verilog,,D:/XilinxProject/CS202-Project/CS202-project/CS202-project.sim/sim_executs32.v,,Executs32,,,,,,,,
+D:/XilinxProject/CS202-Project/CS202-project/CS202-project.srcs/sources_1/new/decode32.v,1684034209,verilog,,D:/XilinxProject/CS202-Project/CS202-project/CS202-project.sim/sim_decoder.v,D:/XilinxProject/CS202-Project/CS202-project/CS202-project.srcs/sources_1/new/public.v,decode32,,,,,,,,
+D:/XilinxProject/CS202-Project/CS202-project/CS202-project.srcs/sources_1/new/public.v,1684030795,verilog,,,,,,,,,,,,
