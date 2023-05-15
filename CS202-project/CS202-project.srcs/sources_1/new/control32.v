@@ -50,7 +50,7 @@ module control32(Opcode, Function_opcode, Jr, RegDST, ALUSrc, MemtoReg, RegWrite
     Branch <= Opcode == `OP_BEQ;
 
     // 处理ALUSrc(所有I-Type，除了bne和beq)
-    ALUSrc <= I_format && Opcode[5:2] != 4'b0001;
+    ALUSrc <= I_format && Opcode[5:2] != 4'b0001 || Opcode == `OP_SW || Opcode == `OP_LW;
 
     // 处理MemtoReg
     MemtoReg <= Opcode == `OP_LW;
