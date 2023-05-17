@@ -20,14 +20,13 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module ioread (
-    input			reset,				// reset, active high 复位信号 (高电平有�?)
-	input			ior,				// from Controller, 1 means read from input device(从控制器来的I/O�?)
-    input			switchctrl,			// means the switch is selected as input device (从memorio经过地址高端线获得的拨码�?关模块片�?)
-    input	[15:0]	ioread_data_switch,	// the data from switch(从外设来的读数据，此处来自拨码开�?)
-    output	reg [15:0]	ioread_data 		// the data to memorio (将外设来的数据�?�给memorio)
+module ioRead (
+    input			reset,				// reset, active high 复位信号 (高电平有�?)
+	input			ior,				// from Controller, 1 means read from input device(从控制器来的I/O�?)
+    input			switchctrl,			// means the switch is selected as input device (从memorio经过地址高端线获得的拨码�?关模块片�?)
+    input	[15:0]	ioread_data_switch,	// the data from switch(从外设来的读数据，此处来自拨码开�?)
+    output	reg [15:0]	ioread_data 		// the data to memorio (将外设来的数据�?�给memorio)
 );
-    
     
     always @* begin
         if (reset)
