@@ -23,7 +23,7 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 
-module leds (
+module led (
     input			ledrst,		// reset, active high (��λ�ź�,�ߵ�ƽ��Ч)
     input			led_clk,	// clk for led (ʱ���ź�)
     input			ledwrite,	// led write enable, active high (д�ź�,�ߵ�ƽ��Ч)
