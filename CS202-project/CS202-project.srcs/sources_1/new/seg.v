@@ -21,28 +21,29 @@
 
 
 module seg(
-    input			segrst,		// reset, active high 
-    input			seg_clk,	// clk for led
-    input			segwrite,	// seg write enable, active high 
-    input			segcs,		// 1 means the segs are selected as output 
-    input	[15:0]	segwdata,	// the data (from register/memorio)  waiting for to be writen to the segs of the board
+    input			segrst,		// reset, active high (��λ�ź�,�ߵ�ƽ��Ч)
+    input			seg_clk,	// clk for led (ʱ���ź�)
+    input			segwrite,	// led write enable, active high (д�ź�,�ߵ�ƽ��Ч)
+    input			segcs,		// 1 means the leds are selected as output (��memorio���ģ��ɵ�����λ�γɵ�LEDƬѡ�ź�)
+    input	[15:0]	segwdata,	// the data (from register/memorio)  waiting for to be writen to the leds of the board
     output  [7:0]   enables,
-    output	reg [6:0] 	segout		// the data writen to the segs  of the board
+    output	reg [6:0] 	segout		// the data writen to the leds  of the board
     );
     reg[7:0] lights;
     assign enables = lights;
     always @ (posedge seg_clk or posedge segrst) begin
         if (segrst) begin
-            lights <= 8'b1111_1111;
+            lights <= 8'h00;
         end    
-        else if (segcs && segwrite) begin
-            if (lights == 8'b1111_1111 | lights == 8'b0111_1111) begin
-                lights <= 8'b1111_1110; 
+        else if (segcs & segwrite) begin
+            if (lights == 8'h00 | lights == 8'h7f) begin
+                lights <= 8'hfe; 
             end 
             else begin
-                lights <= ( lights << 1 | 8'b0000_0001);
-            end        
-        end        
+                lights <= ( lights << 1 | 8'h01);
+            end
+        end    
+        else lights <= 8'h00;                     
     end   
     wire [3:0] groups [0:3];
     assign groups[0] = segwdata [3:0];
@@ -56,7 +57,7 @@ module seg(
     binaryToHex bth3(groups[3], displays[3]);
     always @ (*) begin
         if (segrst) begin
-            segout = 7'b000_0000;
+            segout = 7'b100_0000;
         end
         else begin
             case (lights)
