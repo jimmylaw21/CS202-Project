@@ -30,7 +30,7 @@ module led (
     input			ledcs,		// 1 means the leds are selected as output (��memorio���ģ��ɵ�����λ�γɵ�LEDƬѡ�ź�)
     input	[1:0]	ledaddr,	// 2'b00 means updata the low 16bits of ledout, 2'b10 means updata the high 8 bits of ledout
     input	[15:0]	ledwdata,	// the data (from register/memorio)  waiting for to be writen to the leds of the board
-    output	reg [23:0]	ledout		// the data writen to the leds  of the board
+    output	reg [11:0]	ledout		// the data writen to the leds  of the board
 );
       
     always @ (posedge led_clk or posedge ledrst) begin
