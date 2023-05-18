@@ -3,18 +3,22 @@
 module minisys(
     input wire reset,               // 板上的Reset信号，低电平复位
     input wire pclk,               // 板上�?100MHz时钟信号
-    input wire pconfirm,           // 执行下一步操�?
-    input wire[15:0] ioread_data_switch,    // 拨码�?关输�?
-    output reg[23:0] leds,        // led结果输出到Nexys4
+    input wire[11:0] ioread_data_switch,    // 拨码�?关输�?
+    input [3:0]key_col,            //小键盘列信号
+    input selectInput,             //0为拨码开关，1为小键盘
+    input commucation_mode,        //uart交流模式
+    input working_mode,           //工作模式
+    output [11:0] leds,        // led结果输出到Nexys4
     output [6:0] segs,          //七位数码管显示的数字
-    output [7:0] seg_enables      //七位数码管的使能信号
+    output [7:0] seg_enables,      //七位数码管的使能信号
+    output [3:0] key_row            //小键盘行信号
 );
 
     wire clock, led_clk, seg_clk;              // clock: 分频后时钟供给系�?
     wire iowrite,ioread;     // I/O读写信号
     wire[31:0] write_data;   // 写RAM或IO的数�?
     wire[31:0] rdata;        // 读RAM或IO的数据写入decoder
-    wire[15:0] ioread_data;  // 读IO的数�?
+    wire[15:0] ioread_data,ioread_data1,ioread_data2;  // 读IO的数�?
     wire[31:0] pc_plus_4;    // PC+4
     wire[31:0] read_data_1;  // decoder的输�?
     wire[31:0] read_data_2;  // decoder的输�?
@@ -36,7 +40,7 @@ module minisys(
     wire[1:0] aluop;
     wire[31:0] instruction;
     wire[31:0] opcplus4;
-    wire ledctrl,switchctrl,segctrl;
+    wire ledctrl,switchctrl,segctrl,keyboardctrl;
     
     cpuclk cpuclk(
     .clk_in1(pclk),    // 100MHz
@@ -130,7 +134,8 @@ module minisys(
     .writeData(write_data),  // 来自memio模块，源头是译码单元的read_data2
     .readData(read_data)    //从中读到的数�?
     );
-
+    //需要有一个信号去促使
+    assign ioread_data = selectInput ? ioread_data2 : ioread_data1; 
     MemOrIO memio(
     .mRead(memread),    //来自控制单元，读内存使能
     .mWrite(memwrite),   //来自控制单元，写内存使能
@@ -145,7 +150,8 @@ module minisys(
     .write_data(write_data),         //输出�?要写的数�?
     .LEDCtrl(ledctrl),            //选择灯的外设
     .SwitchCtrl(switchctrl),          //选择拨码�?关的外设
-    .SegCtrl(segctrl)             //选择7段数码管外设
+    .SegCtrl(segctrl),             //选择7段数码管外设
+    .KeyboardCtrl(keyboardctrl)        //选择小键盘外设
     );
     
     ioRead multiioread(
@@ -153,7 +159,19 @@ module minisys(
     .ior(ioread),             //来自控制单元，io读输入使�?
     .switchctrl(switchctrl),   //来自memorio模块，是否�?�择拨码�?关输�?
     .ioread_data_switch(ioread_data_switch),//来自外设拨码�?关的数据
-    .ioread_data(ioread_data) //外设对应的数�?
+    .ioread_data(ioread_data1), //外设对应的数�?
+    .isSelect(selectInput)     //是否选择该外设
+    );
+
+    ioReadKey irk(
+    .clk(pclk),    
+    .reset(reset),
+    .ior(ioread),
+    .keyboardctrl(keyboardctrl),
+    .ioread_data_key(key_col),
+    .ioread_data(ioread_data2),
+    .row(key_row),
+    .isSelect(selectInput)    
     );
 
     led led16(
@@ -174,7 +192,8 @@ module minisys(
     .segwdata(write_data),
     .enables(seg_enables),
     .segout(segs)
-    ); 
+    );
+ 
 
 
 endmodule
