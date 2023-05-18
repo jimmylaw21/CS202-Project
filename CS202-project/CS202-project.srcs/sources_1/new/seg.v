@@ -45,26 +45,22 @@ module seg(
         end    
         else lights <= 8'h00;                     
     end   
-    wire [3:0] groups [0:3];
-    assign groups[0] = segwdata [3:0];
-    assign groups[1] = segwdata [7:4];
-    assign groups[2] = segwdata [11:8];
-    assign groups[3] = segwdata [15:12];
-    wire [6:0] displays [0:3];
-    binaryToHex bth0(groups[0], displays[0]);
-    binaryToHex bth1(groups[1], displays[1]);
-    binaryToHex bth2(groups[2], displays[2]);
-    binaryToHex bth3(groups[3], displays[3]);
+    wire [55:0] displays;
+    binaryToDecimal btd(segwdata, displays);
     always @ (*) begin
         if (segrst) begin
             segout = 7'b100_0000;
         end
         else begin
             case (lights)
-                8'b1111_1110: segout = displays[0];
-                8'b1111_1101: segout = displays[1];
-                8'b1111_1011: segout = displays[2];
-                8'b1111_0111: segout = displays[3];
+                8'b1111_1110: segout = displays[6:0];
+                8'b1111_1101: segout = displays[13:7];
+                8'b1111_1011: segout = displays[20:14];
+                8'b1111_0111: segout = displays[27:21];
+                8'b1110_1111: segout = displays[34:28];
+                8'b1101_1111: segout = displays[41:35];
+                8'b1011_1111: segout = displays[48:42];
+                8'b0111_1111: segout = displays[55:49];
                 default: segout = 7'b100_0000;
             endcase
         end
