@@ -13,7 +13,14 @@ module Ifetc32 (Instruction,
                 Zero,
                 clock,
                 reset,
-                link_addr);
+                link_addr,
+                upg_rst_i,
+                upg_clk_i,
+                upg_wen_i,
+                upg_adr_i,
+                upg_dat_i,
+                upg_done_i
+                );
 
     output [31:0] Instruction;			// 从这个模块获取到的指令，输出到其他模块
     output reg[31:0] branch_base_addr;      // 用于beq,bne指令，(pc+4)输出到ALU
@@ -29,13 +36,23 @@ module Ifetc32 (Instruction,
     input        Zero;                  // 当Zero为1时，表示ALUresult为0
     input        clock,reset;           // 时钟与复位（同步复位信号，高电平有效，当reset=1时，PC赋值为0）
     
-    
+    input upg_rst_i; // UPG reset (Active High)
+    input upg_clk_i; // UPG clock (10MHz)
+    input upg_wen_i; // UPG write enable
+    input[13:0] upg_adr_i; // UPG write address
+    input[31:0] upg_dat_i; // UPG write data
+    input upg_done_i; // 1 if program finished
+
+    /* if kickOff is 1 means CPU work on normal mode, otherwise CPU work on Uart communication mode */
+    wire kickOff = upg_rst_i | (~upg_rst_i & upg_done_i );
     
     reg[31:0] PC, Next_PC;
     
     prgrom instmem(
-    .clka(clock),
-    .addra(PC[15:2]),
+    .clka(kickoff ? clock : upg_clk_i),
+    .wea(kickOff ? 1'b0 : upg_wen_i),
+    .addra(kickOff ? PC[15:2] : upg_adr_i),
+    .dina(kickOff ? 32'h00000000 : upg_dat_i),
     .douta(Instruction)
     );
     
