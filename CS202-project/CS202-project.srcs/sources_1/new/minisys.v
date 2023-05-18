@@ -8,6 +8,9 @@ module minisys(
     input selectInput,             //0为拨码开关，1为小键盘
     input commucation_mode,        //uart交流模式
     input working_mode,           //工作模式
+    inout start_pg,               //uart高电平有效
+    input rx,                      //接收信号
+    output tx,                    //发送信号
     output [11:0] leds,        // led结果输出到Nexys4
     output [6:0] segs,          //七位数码管显示的数字
     output [7:0] seg_enables,      //七位数码管的使能信号
@@ -41,7 +44,27 @@ module minisys(
     wire[31:0] instruction;
     wire[31:0] opcplus4;
     wire ledctrl,switchctrl,segctrl,keyboardctrl;
-    
+
+    // UART Programmer Pinouts
+    wire upg_clk, upg_clk_o;
+    wire upg_wen_o; //Uart write out enable
+    wire upg_done_o; //Uart rx data have done
+    //data to which memory unit of program_rom/dmemory32
+    wire [14:0] upg_adr_o;
+    //data to program_rom or dmemory32
+    wire [31:0] upg_dat_o;
+    wire spg_bufg;
+    BUFG U1(.I(start_pg), .O(spg_bufg)); // de-twitter
+    // Generate UART Programmer reset signal
+    reg upg_rst;
+    always @ (posedge pclk) begin
+        if (spg_bufg) upg_rst = 0;
+        if (reset) upg_rst = 1;
+    end
+    //used for other modules which don't relate to UART
+    wire rst;
+    assign rst = reset | !upg_rst;
+
     cpuclk cpuclk(
     .clk_in1(pclk),    // 100MHz
     .clk_out1(clock)   // cpuclock
@@ -158,7 +181,7 @@ module minisys(
     .reset(reset),             //待解�?
     .ior(ioread),             //来自控制单元，io读输入使�?
     .switchctrl(switchctrl),   //来自memorio模块，是否�?�择拨码�?关输�?
-    .ioread_data_switch(ioread_data_switch),//来自外设拨码�?关的数据
+    .ioread_data_switch({4'h0,ioread_data_switch}),//来自外设拨码�?关的数据
     .ioread_data(ioread_data1), //外设对应的数�?
     .isSelect(selectInput)     //是否选择该外设
     );
@@ -179,7 +202,6 @@ module minisys(
     .ledclk(led_clk),
     .ledwrite(iowrite),
     .ledcs(ledctrl),
-    .ledaddr(2'b00),
     .ledwdata(write_data),
     .ledout(leds)
     );
