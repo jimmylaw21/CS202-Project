@@ -27,6 +27,17 @@ module decode32(read_data_1,read_data_2,Instruction,mem_data,ALU_result,
     reg[5:0] opcode; // op
     reg sign;
 
+
+    integer k;
+    initial begin
+        for (k = 0; k < 31; k = k + 1) begin
+            register[k] = 0;
+        end
+        register[31] = 32'hFFFFF000;
+    end
+
+
+
     always @(*) begin
         // 填充上面的一系列参数
         read_register_1_address = Instruction[`RsRange];
@@ -72,7 +83,8 @@ module decode32(read_data_1,read_data_2,Instruction,mem_data,ALU_result,
     integer i;
     always @(posedge clock) begin       // 本进程写目标寄存器
         if (reset == `Enable) begin              // 初始化寄存器组
-            for (i = 0; i < 32; i = i + 1) register[i] <= 0;    // register[0] = 0
+            for (i = 0; i < 31; i = i + 1) register[i] <= 0;    // register[0] = 0
+            register[31] = 32'hFFFFF000;
         end else if (RegWrite == `Enable) begin  // 注意寄存器0恒等于0
             if (write_register_address != 5'b00000) begin // don't write to register 0
                 register[write_register_address] <= write_data;
