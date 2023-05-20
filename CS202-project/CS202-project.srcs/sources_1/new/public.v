@@ -100,13 +100,6 @@
 `define OP_SRAV             6'b00_0111
 //------------------------------------------------------------------------------//
 
-//---------------------------------Hazard---------------------------------------//
-// signals for the stage registers (hazard_control)
-`define HAZD_CTL_WIDTH      2                   // width of hazard control signal
-`define HAZD_CTL_NORMAL     2'b00               // normal execution state
-`define HAZD_CTL_RETRY      2'b01               // deny values from pervious stage only
-`define HAZD_CTL_NO_OP      2'b11               // deny values from previous stage and no_op the next stage
-// `define HAZD_CTL_RESUME     2'b10               // no hold and do not accept no_op signal from previous stage
 
 // values of issue_type 
 `define ISSUE_TYPE_WIDTH    3
@@ -119,6 +112,9 @@
 `define ISSUE_KEYPAD        3'b110
 `define ISSUE_FALLTHROUGH   3'b111              // the next instruction address exceeds `PC_MAX_VALUE 
 //------------------------------------------------------------------------------//
+
+//---------------------------------Clocks---------------------------------------//
+`define KEYPAD_DELAY_PERIOD 250_000             // for keypad_unit to scan every 0.25s (0.25s needed to confirm the key)
 
 `define VGA_BIT_DEPTH       12                  // VGA color depth
 
