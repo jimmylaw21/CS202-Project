@@ -53,7 +53,7 @@ module cache #(parameter A_WIDTH = 32,
     
     // d_valid is a piece of memory stored the valid info for every block
     reg d_valid [0 : (1 << C_INDEX) - 1];
-    // T_WIDTH is the width of ‘Tag�???
+    // T_WIDTH is the width of ‘Tag�????
     localparam T_WIDTH = A_WIDTH - C_INDEX - 2;
     //d_tags is a piece of memory stored the tag info for every block
     reg [T_WIDTH-1: 0] d_tags [0 : (1 << C_INDEX) - 1];
@@ -72,15 +72,17 @@ module cache #(parameter A_WIDTH = 32,
     
     //Cache write
     wire c_write = p_rw | cache_miss & m_ready ;
+    integer i;
     always @ (posedge clk, negedge resetn)
+    begin
         if (resetn == 1'b0)
         begin
-            integer i;
             for (i = 0; i < (1 << C_INDEX); i = i + 1)
                 d_valid[i] = 1'b0;  // use blocking assignment here for immediate effect
         end
         else if (c_write == 1'b1)
             d_valid[index] <= 1'b1;
+    end
     
     always @ (posedge clk)
         if (c_write == 1'b1) d_tags[index] = tag;
