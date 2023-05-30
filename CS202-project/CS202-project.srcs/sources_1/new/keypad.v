@@ -1,3 +1,4 @@
+`include "public.v"
 // The keypad module reads input from a 4x4 keypad and generates corresponding key press events.
 module keypad(clk, rst_n, row_in, col_out, press, keyboard_val);
 // clock signal
@@ -28,14 +29,6 @@ always @ (posedge clk or posedge rst_n)
 // derive key clock from counter
 assign key_clk = cnt[19];  // frequency is main clock frequency divided by 2^20
 
-// define state codes
-parameter NO_KEY_PRESSED = 6'b000_001;  // no key is pressed
-parameter SCAN_COL0      = 6'b000_010;  // scan column 0
-parameter SCAN_COL1      = 6'b000_100;  // scan column 1
-parameter SCAN_COL2      = 6'b001_000;  // scan column 2
-parameter SCAN_COL3      = 6'b010_000;  // scan column 3
-parameter KEY_PRESSED    = 6'b100_000;  // a key is pressed
-
 // state variables
 reg [5:0] current_state, next_state;    
 
@@ -43,7 +36,7 @@ reg [5:0] current_state, next_state;
 always @ (posedge key_clk or posedge rst_n)
   if (rst_n)
     begin
-    current_state <= NO_KEY_PRESSED;  // reset state
+    current_state <= `NO_KEY_PRESSED;  // reset state
     end
   else
     current_state <= next_state;  // go to next state
@@ -51,18 +44,18 @@ always @ (posedge key_clk or posedge rst_n)
 // state transition logic
 always @ (*)
   case (current_state)
-    NO_KEY_PRESSED :                    
-      next_state = row_in != 4'hF ? SCAN_COL0 : NO_KEY_PRESSED;
-    SCAN_COL0 :                         
-      next_state = row_in != 4'hF ? KEY_PRESSED : SCAN_COL1;
-    SCAN_COL1 :                         
-      next_state = row_in != 4'hF ? KEY_PRESSED : SCAN_COL2; 
-    SCAN_COL2 :                         
-      next_state = row_in != 4'hF ? KEY_PRESSED : SCAN_COL3;
-    SCAN_COL3 :                         
-      next_state = row_in != 4'hF ? KEY_PRESSED : NO_KEY_PRESSED;
-    KEY_PRESSED :                       
-      next_state = row_in != 4'hF ? KEY_PRESSED : NO_KEY_PRESSED;                    
+    `NO_KEY_PRESSED :                    
+      next_state = row_in != 4'hF ? `SCAN_COL0 : `NO_KEY_PRESSED;
+    `SCAN_COL0 :                         
+      next_state = row_in != 4'hF ? `KEY_PRESSED : `SCAN_COL1;
+    `SCAN_COL1 :                         
+      next_state = row_in != 4'hF ? `KEY_PRESSED : `SCAN_COL2; 
+    `SCAN_COL2 :                         
+      next_state = row_in != 4'hF ? `KEY_PRESSED : `SCAN_COL3;
+    `SCAN_COL3 :                         
+      next_state = row_in != 4'hF ? `KEY_PRESSED : `NO_KEY_PRESSED;
+    `KEY_PRESSED :                       
+      next_state = row_in != 4'hF ? `KEY_PRESSED : `NO_KEY_PRESSED;                    
   endcase
  
 // flag to indicate whether a key press event has been detected
@@ -79,20 +72,20 @@ always @ (posedge key_clk or posedge rst_n)
   end
   else
     case (next_state)
-      NO_KEY_PRESSED :  // if no key is pressed
+      `NO_KEY_PRESSED :  // if no key is pressed
       begin
         col_out          <= 4'h0;  // no column is selected
         key_pressed_flag <=    0;  // no key press event       
       end
-      SCAN_COL0 :  // if scanning column 0
+      `SCAN_COL0 :  // if scanning column 0
         col_out <= 4'b1110;  // select column 0
-      SCAN_COL1 :  // if scanning column 1
+      `SCAN_COL1 :  // if scanning column 1
         col_out <= 4'b1101;  // select column 1
-      SCAN_COL2 :  // if scanning column 2
+      `SCAN_COL2 :  // if scanning column 2
         col_out <= 4'b1011;  // select column 2
-      SCAN_COL3 :  // if scanning column 3
+      `SCAN_COL3 :  // if scanning column 3
         col_out <= 4'b0111;  // select column 3
-      KEY_PRESSED :  // if a key is pressed
+      `KEY_PRESSED :  // if a key is pressed
       begin
         col_val          <= col_out;  // save the value of the pressed column
         row_val          <= row_in;  // save the value of the pressed row

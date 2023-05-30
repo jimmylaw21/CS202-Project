@@ -1,3 +1,4 @@
+`include "public.v"
 // `timescale 1ns / 1ps
 // //////////////////////////////////////////////////////////////////////////////////
 // // Company:
@@ -36,7 +37,8 @@ module cache #(parameter A_WIDTH = 32,
                m_din,
                m_strobe,
                m_rw,
-               m_ready);
+               m_ready,
+               hitcnt);
     input clk, resetn;
     input [A_WIDTH-1:0] p_a; //address of memory to be accessed
     input [D_WIDTH-1:0] p_dout; //the data from cpu
@@ -50,10 +52,11 @@ module cache #(parameter A_WIDTH = 32,
     output m_strobe; //1 means to do the reading or writing
     output m_rw; //0:read, 1:write
     input m_ready; //memory is read
+    output reg[15:0] hitcnt;
     
     // d_valid is a piece of memory stored the valid info for every block
     reg d_valid [0 : (1 << C_INDEX) - 1];
-    // T_WIDTH is the width of ‘Tag�????
+    // T_WIDTH is the width of ‘Tag�????
     localparam T_WIDTH = A_WIDTH - C_INDEX - 2;
     //d_tags is a piece of memory stored the tag info for every block
     reg [T_WIDTH-1: 0] d_tags [0 : (1 << C_INDEX) - 1];
@@ -69,6 +72,14 @@ module cache #(parameter A_WIDTH = 32,
     //cache control
     wire cache_hit  = valid & (tag == tagout);
     wire cache_miss = ~cache_hit;
+
+    initial begin
+        hitcnt = 0;
+    end
+
+    always @(posedge cache_hit) begin
+        hitcnt <= hitcnt + 1;
+    end
     
     //Cache write
     wire c_write = p_rw | cache_miss & m_ready ;
@@ -82,15 +93,19 @@ module cache #(parameter A_WIDTH = 32,
         end
         else if (c_write == 1'b1)
             d_valid[index] <= 1'b1;
+        else
+            d_valid[index] <= d_valid[index];
     end
     
     always @ (posedge clk)
-        if (c_write == 1'b1) d_tags[index] = tag;
+        if (c_write == 1'b1) d_tags[index] <= tag;
+        else d_tags[index] <= d_tags[index];
     
     wire sel_in              = p_rw;
     wire [D_WIDTH-1:0] c_din = sel_in ? p_dout : m_din;
     always @ (posedge clk)
-        if (c_write == 1'b1) d_data[index] = c_din;
+        if (c_write == 1'b1) d_data[index] <= c_din;
+        else d_data[index] <= d_data[index];
     
     // Memory write (write_through)
     assign m_a      = p_a;

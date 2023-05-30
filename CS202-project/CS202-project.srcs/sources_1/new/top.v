@@ -1,63 +1,52 @@
 `include "public.v"
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2023/05/20 10:39:40
+// Design Name: 
+// Module Name: top
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
 
 module top(
-    // input pclk1,
-    input  reset,               // ???Reset????????
-    input  pclk,               // ????100MHz????
-    input [13:0] sw,    // ????????
-    input confirm,
-    output signal,
-    output [15:0] leds,        // led?????Nexys4
-    output [6:0] segs,          //??????????
-    output [7:0] seg_enables,   //?????????
+    input  reset,               // 开发板上的Reset信号，高电平有效
+    input  fpga_clk,               // 开发板的时钟信号，100MHZ
+    input [14:0] sw,    // 用于输入的拨码开关，sw[11:11]为选择输入a或b，sw[10:8]为选择相应的测试样例，低八位为输入的数据。
+    input confirm,       //确定信号，在部分测试场景中需要该信号的高电平来显示输出数据
+    input start_pg,     //用于切换成uart通信模式的信号
+    input rx,           //uart输入信号
+    output tx,          //uart输出信号
+    output signal,      //用于判断溢出等特殊情况的信号,高电平表示该情况发生
+    output [15:0] leds,        // 输出到led灯的数据
+    output [6:0] segs,          //七段数码管显示的数字
+    output [7:0] seg_enables,  //七段数码管的使能信号
     input  [3:0] row_in,
-    output [3:0] col_out,
-    output hsync,
-    output vsync,
-    output [`VGA_BIT_DEPTH - 1:0] vga_signal
-
-//     ,output  [31:0] instruction1,
-//     output  [31:0] branch_base_addr1,
-//     output  [31:0] opcplus41,
-//     output clock1,
-//   output mWrite1, rWrite1, ioWrite1,
-//   output mRead1, ioRead1,
-//   output [31:0] address1,
-//   output [31:0] readdata1,
-//   // ????????...
-//   output jr1, jal1, jmp1, beq1, bnq1,
-//   output regdst1,
-//   output alusrc1,
-//   output sftmd1,
-//   output i_format1,
-//   output [1:0] aluop1,
-//   output [31:0] aluresult1,
-//   output MemorIOtoReg1,
-//   output [31:0] read_data_11, read_data_21,
-//   output [31:0] memio_data1,
-//   output [31:0] sign_extend1,
-//   // ????????...
-//   output [31:0] addr_result1,
-//   output zero1,
-//   output [15:0] ioread_data1,
-
-//   // ????????...
-//   output [31:0] write_data1,
-//   output [2:0] ledctrl1,
-//   output [3:0] switchctrl1,
-//   output segctrl1,
-//   output[7:0] a,
-//   output [7:0]b,
-//   output seg_clk1
+    output [3:0] col_out
     );
 
-
-    wire clock,seg_clk,led_clk;
+    //各模块所需时钟
+    wire cpu_clk,seg_clk,led_clk;
+    //各模块些使能
     wire mWrite,rWrite,ioWrite;
+    //各模块读使能
     wire mRead,ioRead;
+    //连接各模块的接线
     wire [31:0] address;
     wire [31:0] readdata;
-     wire [31:0] instruction;
+    wire [31:0] instruction, instruction_o;
     wire jr,jal,jmp,beq,bnq;
     wire regdst;
     wire alusrc;
@@ -65,247 +54,224 @@ module top(
     wire i_format;
     wire [1:0] aluop;
     wire [31:0] aluresult;
+    wire [13:0] rom_adr_o;
     wire MemorIOtoReg;
     wire [31:0] read_data_1,read_data_2;
     wire [31:0] memio_data;
     wire [31:0] sign_extend;
-     wire [31:0] opcplus4;
-     wire [31:0] branch_base_addr;
+    wire [31:0] opcplus4;
+    wire [31:0] branch_base_addr;
     wire [31:0] addr_result;
     wire zero;
-     wire [15:0] ioread_data;
-     wire [7:0] input_data;
-     reg [7:0] keypadread_data;
+    wire [15:0] ioread_data;
     wire [31:0] write_data;
+    wire [7:0] input_data;
+
+    //区分输入和输出数据的种类
     wire [2:0]ledctrl;
     wire segctrl;
     wire [3:0] switchctrl;
-    wire vgactrl;
+   
+    // UART Programmer Pinouts
+    wire upg_clk, upg_clk_o;
+    wire upg_wen_o; //Uart write out enable
+    wire upg_done_o; //Uart rx data have done
+    //data to which memory unit of program_rom/dmemory32
+    wire [14:0] upg_adr_o;
+    //data to program_rom or dmemory32
+    wire [31:0] upg_dat_o;
+    wire spg_bufg;
+    BUFG U1(.I(start_pg), .O(spg_bufg)); // de-twitter
+    // Generate UART Programmer reset signal
+    reg upg_rst;
+    always @ (posedge fpga_clk) begin
+    if (spg_bufg) upg_rst = 1'b0;   
+    if (reset) upg_rst = 1'b1;
+    end
+    //used for other modules which don't relate to UART，高电平有效
+    wire rst;
+    assign rst = reset | !upg_rst;
 
-//         assign mWrite1 = mWrite;
-// assign rWrite1 = rWrite;
-// assign ioWrite1 = ioWrite;
-// assign mRead1 = mRead;
-// assign ioRead1 = ioRead;
-// assign address1 = address;
-// assign readdata1 = readdata;
-// // ????assign??...
-// assign jr1 = jr;
-// assign jal1 = jal;
-// assign jmp1 = jmp;
-// assign beq1 = beq;
-// assign bnq1 = bnq;
-// assign regdst1 = regdst;
-// assign alusrc1 = alusrc;
-// assign sftmd1 = sftmd;
-// assign i_format1 = i_format;
-// assign aluop1 = aluop;
-// assign aluresult1 = aluresult;
-// assign MemorIOtoReg1 = MemorIOtoReg;
-// assign read_data_11 = read_data_1;
-// assign read_data_21 = read_data_2;
-// assign memio_data1 = memio_data;
-// assign sign_extend1 = sign_extend;
-// assign opcplus41 = opcplus4;
-// assign branch_base_addr1 = branch_base_addr;
-// // ????assign??...
-// assign addr_result1 = addr_result;
-// assign zero1 = zero;
-// // ????assign??...
-// assign write_data1 = write_data;
-// assign ledctrl1 = ledctrl;
-// assign switchctrl1 = switchctrl;
-// assign ioread_data1 = ioread_data;
-// assign segctrl1 = segctrl;
-// assign instruction1 = instruction;
-// assign seg_clk1 = seg_clk;
+    
+    uart_bmpg_0 ub0(
+    .upg_clk_i(upg_clk),   //uart的时钟（10MHZ）
+    .upg_rst_i(upg_rst),    //uart的复位信号，高电平有效
+    .upg_rx_i(rx),          //uart的rx信号
+    .upg_clk_o(upg_clk_o),  //uart输出到指令memory和数据memory的时钟信号
+    .upg_wen_o(upg_wen_o),  //uart的写使能信号
+    .upg_adr_o(upg_adr_o),  //uart写入memory的地址
+    .upg_dat_o(upg_dat_o),  //uart写入memory的数据
+    .upg_done_o(upg_done_o),    //表明数据是否传输完成
+    .upg_tx_o(tx)           //uart的输出信号
+    );
 
     cpuclk cpuclk1(
-    .clk_in1(pclk),
-    .clk_out1(clock)    
+    .clk_in1(fpga_clk),     //开发板的顶层时钟
+    .clk_out1(cpu_clk),     //各模块工作模式下的时钟
+    .clk_out2(upg_clk)      //各模块通信交流模式下的时钟
     );
 
     ToBoardClock #(10000) tbc_seg(
-    .clk(pclk),
-    .rst(reset),
-    .new_clk(seg_clk)    
+    .clk(fpga_clk),     
+    .rst(rst),
+    .new_clk(seg_clk)    // 用于seg扫描、使能信号变更的时钟信号
     );
 
-
     ToBoardClock #(100000) tbc_led(
-     .clk(pclk),
-     .rst(reset),
-     .new_clk(led_clk)    
+     .clk(fpga_clk),
+     .rst(rst),
+     .new_clk(led_clk)    //用于led显示的时钟信号
      );
 
     controller32 ctl(
-    .Opcode(instruction[31:26]),
-    .Function_opcode(instruction[5:0]),
-    .Jr(jr),
-    .Jal(jal),
-    .Jmp(jmp),
-    .Branch(beq),
-    .nBranch(bnq),
-    .RegDST(regdst),
-    .RegWrite(rWrite),
-    .MemWrite(mWrite),
-    .ALUSrc(alusrc),
-    .Sftmd(sftmd),
-    .I_format(i_format),
-    .ALUOp(aluop),
+    .Opcode(instruction[31:26]),    //指令高六位，判断指令类型
+    .Function_opcode(instruction[5:0]), //指令低六位，用于R型指令的function_code
+    .Jr(jr),    //是否为jr指令
+    .Jal(jal),  //是否jal指令
+    .Jmp(jmp),  //是否为jump指令
+    .Branch(beq),   //是否为beq指令
+    .nBranch(bnq),  //是否为bnq指令
+    .RegDST(regdst),    //传给decoder32，表明目标寄存器是哪一个
+    .RegWrite(rWrite),  //寄存器写使能
+    .MemWrite(mWrite),  //数据memory写使能
+    .ALUSrc(alusrc),    //第二个数据是否为立即数
+    .Sftmd(sftmd),      //是否位移位指令
+    .I_format(i_format),    //是否为I型指令
+    .ALUOp(aluop),          //是否为branch指令或访存指令
     .Alu_resultHigh(aluresult[31:10]),
-    .MemorIOtoReg(MemorIOtoReg),
-    .MemRead(mRead),
-    .IORead(ioRead),
-    .IOWrite(ioWrite)    
+    .MemorIOtoReg(MemorIOtoReg), //写寄存器使能
+    .MemRead(mRead),        //数据memory读使能
+    .IORead(ioRead),        //io读使能
+    .IOWrite(ioWrite)       //io写使能
     );
 
     decoder32 deco(
-    .read_data_1(read_data_1),  // ????1?rs??
-    .read_data_2(read_data_2),  // ????2?rt??
-    .Instruction(instruction), // ??????
-    .memIO_data(memio_data),   // ??memorio????DATA RAM or I/O port??????
-    .ALU_result(aluresult),  // ??ALU????????????32??
-    .Jal(jal),              // ??controller??????JAL
-    .RegWrite(rWrite),         // ??controller????????
-    .MemIOtoReg(MemorIOtoReg),     //??controller?? ???????MEM
-    .RegDst(regdst),           // ??controller??1????????rd????rt
-    .Sign_extend(sign_extend),  // ????????
-    .clock(clock),              //23Mhz
-    .reset(reset),              //????
+    .read_data_1(read_data_1),  // 从第一个寄存器读出的数据（rs）
+    .read_data_2(read_data_2),  // 从第二个寄存器读出的数据（rt）
+    .Instruction(instruction), // 来自取指模块
+    .memIO_data(memio_data),   // 来自memorio模块，从DATA RAM or I/O port取出的数据?
+    .ALU_result(aluresult),  // 来自ALU模块，需要扩展立即数为32位?
+    .Jal(jal),              // 来自controller，指令是不是JAL
+    .RegWrite(rWrite),         // 来自controller，寄存器写使能
+    .MemIOtoReg(MemorIOtoReg),     //来自controller 数据来源是不是MEM
+    .RegDst(regdst),           // 来自controller，为1说明目标寄存器是rd，否则是rt
+    .Sign_extend(sign_extend),  // 立即数扩展的结果
+    .clock(cpu_clk),              //23Mhz
+    .reset(rst),              //工作模式复位信号
     .opcplus4(opcplus4)         // The JAL instruction is used to write the return address to the $ra register, what we have got here is PC + 4
     );
 
+    programrom pg1(
+    .rom_clk_i(cpu_clk),            //工作模式的时钟
+    .rom_adr_i(rom_adr_o),          //来自IFetch32模块
+    .upg_rst_i(upg_rst),            //通信模式的复位信号，高电平有效
+    .upg_clk_i(upg_clk_o),          //通信模式的时钟
+    .upg_wen_i(upg_wen_o & (!upg_adr_o[14])),   //通信模式往指令memory写入的使能
+    .upg_adr_i(upg_adr_o[13:0]),    //通信模式时要写入的地址
+    .upg_dat_i(upg_dat_o),          //通信模式时要写入的数据
+    .upg_done_i(upg_done_o),        //是否完成写入
+    .Instruction_o(instruction_o)   //从指令memory里获取的32位指令，传入IFetch32模块
+    );
+
     IFetch32 IF(
-        .Instruction(instruction),  //????32????
-        .branch_base_addr(branch_base_addr), //???ALU?branch????PC+4
-        .Addr_result(addr_result),   //??ALU?branch????????
-        .Read_data_1(read_data_1),  //??decoder?jr????PC??????
-        .Branch(beq),           //??controller????beg??
-        .nBranch(bnq),         //??controller????bnq??
-        .Jmp(jmp),                 //??controller????jump??
-        .Jal(jal),                 //??controller????jal??
-        .Jr(jr),                    //??controller????jr??
-        .Zero(zero),              //??controller???alu_result??0
-        .clock(clock),            //??cpuclk
-        .reset(reset),            //????
-        .link_addr(opcplus4)    //???decoder???jal????PC+4
+    .Instruction_o(instruction),  //传给decoder的32位指令
+    .branch_base_addr(branch_base_addr), //输出到ALU，branch指令时的PC+4
+    .Addr_result(addr_result),   //来自ALU，branch指令需要跳转到的地址
+    .Read_data_1(read_data_1),  //来自decoder，jr指令更新PC时用的地址
+    .Branch(beq),           //来自controller，是否为beg指令
+    .nBranch(bnq),         //来自controller，是否为bnq指令
+    .Jmp(jmp),                 //来自controller，是否为jump指令
+    .Jal(jal),                 //来自controller，是否为jal指令
+    .Jr(jr),                    //来自controller，是否为jr指令
+    .Zero(zero),              //来自controller，表明alu_result的值是否为0
+    .clock(cpu_clk),            //来自cpuclk，工作模式时钟信号
+    .reset(rst),            //工作模式复位信号，高电平有效
+    .link_addr(opcplus4),    //输出到decoder，用于jal指令时的PC+4
+    .Instruction(instruction_o), //从programrom模块传入
+    .rom_adr_o(rom_adr_o)   //下一次从指令memory获取指令得地址
     );
 
     excutes32 exc(
-    .Read_data_1(read_data_1),		// ??decoder, r-form rs ??????Read_data_1??
-    .Read_data_2(read_data_2),		// ??decoder?r-form rt ??????Read_data_2??
-    .Sign_extend(sign_extend),		// ??decoder?i-form ??????????????
-    .Function_opcode(instruction[5:0]),  // ???????r-form instructions[5..0] ??????R??Func
-    .Opcode(instruction[31:26]),  		// ???????opcode ????????Op
-    .ALUOp(aluop),            // ??????ALUOp????????LW/SW 00?BEQ/BNE 01?R/I 10??
-    .Shamt(instruction[10:6]),            // ??????????
-    .Sftmd(sftmd),            // ??????????????
-    .ALUSrc(alusrc),           // ????????????????????beq?bne????
-    .I_format(i_format),         // ??????beq?bne?lw?sw?????I????
+    .Read_data_1(read_data_1),		// 来自decoder, r-form rs 从译码单元是Read_data_1中来
+    .Read_data_2(read_data_2),		// 来自decoder，r-form rt 从译码单元是Read_data_2中来
+    .Sign_extend(sign_extend),		// 来自decoder，i-form 译码单元来的扩展后的立即数?
+    .Function_opcode(instruction[5:0]),  // 来自取指模块，r-form instructions[5..0] 取指单元来的R型的Func
+    .Opcode(instruction[31:26]),  		// 来自取指模块，opcode 取址单元来的Op
+    .ALUOp(aluop),            // 控制单元来的ALUOp，第2级控制（LW/SW 00，BEQ/BNE 01，R/I ）?
+    .Shamt(instruction[10:6]),            // 来自取指模块，移位量
+    .Sftmd(sftmd),            // 来自控制单元，是否是移位指令
+    .ALUSrc(alusrc),           // 来自控制单元，表明第二个操作数是否为立即数（beq、bne除外）?
+    .I_format(i_format),         // 该指令是除了beq、bne、lw、sw以外的其他I类型指令
     .Zero(zero),             // Zero Flag
-    .ALU_Result(aluresult),       // ????????????
-    .Addr_Result(addr_result),		// ????????       
-    .PC_plus_4(branch_base_addr)         // ???????PC+4    
+    .ALU_Result(aluresult),       // 执行单元的最终运算结果?
+    .Addr_Result(addr_result),		// 计算的地址结果       
+    .PC_plus_4(branch_base_addr)         // 来自取指单元的PC+4    
     );
 
-    wire cache_ready;
-    wire [31:0] cache_addr;
-    wire [31:0] cache_readdata;
-    wire [31:0] cache_writedata;
-    wire cache_strobe;
-    wire cache_rw;
-    wire m_ready;
-
-    cache cache(
-        .clk(clock),
-        .resetn(reset),
-        .p_a(address),
-        .p_dout(write_data),
-        .p_din(readdata),
-        .p_strobe(mWrite||mRead),
-        .p_rw(mWrite),
-        .p_ready(cache_ready),
-        .m_a(cache_addr),
-        .m_dout(cache_readdata),
-        .m_din(cache_writedata),
-        .m_strobe(cache_strobe),
-        .m_rw(cache_rw),
-        .m_ready(m_ready)
-    );
-
-    memory32 mem(
-    .clock(clock),
-    .memWrite(cache_rw),
-    .address(cache_addr),
-    .writeData(cache_writedata),
-    .readData(cache_readdata),
-    .m_strobe(cache_strobe),
-    .m_ready(m_ready)
-    );
-    
-//70A,72B,60led low8,62 high8,64 16?,66seg,68????,74???58??
     memorio memorio1(
-    .mRead(mRead),    //????????????
-    .mWrite(mWrite),   //????????????
-    .ioRead(ioRead),     //???????io??????
-    .ioWrite(ioWrite),   //???????io??????
-    .addr_in(aluresult),         //??alu?alu????
-    .addr_out(address),           //??????????
-    .m_rdata(readdata),            //??????????  
-    .io_rdata(ioread_data),           //??IOread????   
-    .r_wdata(memio_data),            //???decoder????  
-    .r_rdata(read_data_2),            //???decoder????
-    .write_data(write_data),         //??????????
-    .LEDCtrl(ledctrl),            //??????
-    .SwitchCtrl(switchctrl),          //??????????
-    .SegCtrl(segctrl),
-    .VgaCtrl(vgactrl)
+    .mRead(mRead),    //来自控制单元，读内存使能
+    .mWrite(mWrite),   //来自控制单元，写内存使能
+    .ioRead(ioRead),     //来自控制单元，io读输入使能
+    .ioWrite(ioWrite),   //来自控制单元，io写输入使能
+    .addr_in(aluresult),         //来自alu，alu的结果
+    .addr_out(address),           //数据内存的地址
+    .m_rdata(readdata),            //来自数据内存的数据
+    .io_rdata(ioread_data),           //来自拨码开关输入的数据  
+    .r_wdata(memio_data),            //要写入decoder的数据
+    .r_rdata(read_data_2),            //读来自decoder的数据
+    .write_data(write_data),         //输出外设要显示的数据
+    .LEDCtrl(ledctrl),            //表明当前led灯是否显示且显示哪种类型的数据
+    .SwitchCtrl(switchctrl),          //表明当前拨码开关输入的是哪种类型的数据
+    .SegCtrl(segctrl)               //是否选择七段数码管作为输出外设
     );
 
     leds led16(
-    .ledrst(reset),
-    .led_clk(led_clk),
-    .ledwrite(ioWrite),
-    .high_low(ledctrl[1:0]),
-    .extra(ledctrl[2:2]),
-    .ledwdata(write_data[15:0]),
-    .signal(signal),
-    .ledout(leds) 
+    .ledrst(rst),   //工作模式复位信号
+    .led_clk(led_clk),  //led灯更新显示的频率
+    .led_clk1(cpu_clk), //led灯更新即将显示数据的频率
+    .ledwrite(ioWrite), //来自控制模块
+    .high_low(ledctrl[1:0]),    //表明是否更新led灯的高8位和低8位，来自memorio模块
+    .extra(ledctrl[2:2]),       //表明传入的数据是否为溢出等特殊情况时的，来自memorio模块
+    .ledwdata(write_data[15:0]),//传入led的数据，来自memorio模块
+    .signal(signal),            //顶层模块输出
+    .ledout(leds)               //16位输出与顶层输出相连
     );
     
-    switchs swi(
-    .reset(reset),
-    .ior(ioRead),
-    .switchctrl(switchctrl),
-    .testcase(sw[10:8]),
-    .ioread_data_switch(input_data),
-    .ioread_data(ioread_data),
-    .aorb(sw[11:11]),
-    .sw_clock(clock),
-    .confirm(confirm)
+    ioRead ioR(
+    .reset(rst),    //工作模式复位信号，高电平有效
+    .ior(ioRead),   //来自controller模块
+    .switchctrl(switchctrl),    //来自memorio模块，表明目前需要传输的数据的类型
+    .testcase(sw[10:8]),        //顶层输入，用于表示测试样例号
+    .input_data(input_data),   //顶层输入，表明输入的数据
+    .ioread_data(ioread_data),      //传到memorio模块的数据
+    .a_or_b(sw[11:11]),               //顶层输入，高电平表明输入的为b，否则为a
+    .ioread_clock(cpu_clk),             //工作模式更新的频率  
+    .confirm(confirm)               //顶层输入，确定信号
     );
 
+    wire[15:0] hitcnt;
     seg seg7(
-    .segrst(reset),
-    .seg_clk(seg_clk),
-    .seg_clk1(clock),
-    .segctrl(segctrl),
-    .segwdata(write_data[15:0]),
-    .enables(seg_enables),
-    .segout(segs)
+    .segrst(rst),  //工作模式复位信号，高电平有效
+    .seg_clk(seg_clk), //扫描时钟信号
+    .seg_clk1(cpu_clk), //更新数据的时钟信号
+    .segctrl(segctrl),  //来自memorio模块，是否需要输出到七段数码管上
+    .cache_enable(sw[14]),
+    .segwdata(sw[14] ? hitcnt : write_data[15:0]),    //来自memorio模块传入seg的数据
+    .enables(seg_enables),          //输出到顶层,使能信号
+    .segout(segs)                   //输出到顶层,七段数码管显示
     );
 
+    //小键盘
     wire press;
     wire [3:0] keyboard_val;
 
     keypad keypad(
-    .clk(clock),
-    .rst_n(reset),
-    .row_in(row_in),
-    .col_out(col_out),
-    .press(press),
-    .keyboard_val(keyboard_val)
+    .clk(cpu_clk),
+    .rst_n(rst),
+    .row_in(row_in),    //行信号
+    .col_out(col_out),  //列信号
+    .press(press),      //是否按下
+    .keyboard_val(keyboard_val) //小键盘按下的值
     );
 
     reg[1:0] counter = 2'b00;
@@ -313,18 +279,19 @@ module top(
     wire keypadClear = sw[13:13];
     reg [24:0] cnt;      
     wire k_clk;
+    reg [7:0] keypadread_data;
     
     /////////// 分频
-    always @ (posedge pclk or posedge reset)
-    if (reset)
+    always @ (posedge fpga_clk or posedge rst)
+    if (rst)
         cnt <= 0;
     else
         cnt <= cnt + 1'b1;
         
     assign k_clk = cnt[24]; 
 
-    always @(posedge k_clk or posedge reset or posedge keypadClear) begin
-        if(reset) begin
+    always @(posedge k_clk or posedge rst or posedge keypadClear) begin
+        if(rst) begin
             keypadread_data <= 8'h00;
             counter <= 2'b00;
         end
@@ -349,47 +316,52 @@ module top(
     assign input_data[7:0] = inputChoose ? keypadread_data[7:0] : sw[7:0];
 
 
-    // wire vga_clk;
-    // ToVgaClock toVgaClock(
-    //     .clk                    (clock),
-    //     .rst_n                  (reset),
-    //     .clk_vga                (vga_clk)
-    // );
 
-    // wire [`COORDINATE_WIDTH - 1:0] vga_unit_x, vga_unit_y;
-    // wire vga_unit_display_en;
+    //cache部分
+    wire cache_ready;
+    wire [31:0] cache_addr;
+    wire [31:0] cache_readdata;
+    wire [31:0] cache_writedata;
+    wire cache_strobe;
+    wire cache_rw;
+    wire m_ready;
 
+ 
 
-    // vga vga(
-    //     .clk_vga                (vga_clk),
-    //     .rst_n                  (reset),
-    //     .hsync                  (hsync),
-    //     .vsync                  (vsync),
-    //     .display_en             (vga_unit_display_en),
-    //     .x                      (vga_unit_x),
-    //     .y                      (vga_unit_y)
-    // );
+    //p开头的端口接memorio,m开头的端口接memory
+    //_ready说明是否准备好，_rw和_strobe共同判断是否需要操作
+    cache cache(
+        .clk(cpu_clk),
+        .resetn(rst),
+        .p_a(address), 
+        .p_dout(write_data),
+        .p_din(readdata),
+        .p_strobe(mWrite||mRead),
+        .p_rw(mWrite),
+        .p_ready(cache_ready),
+        .m_a(cache_addr),
+        .m_dout(cache_readdata),
+        .m_din(cache_writedata),
+        .m_strobe(cache_strobe),
+        .m_rw(cache_rw),
+        .m_ready(m_ready),
+        .hitcnt(hitcnt)
+    );
 
-    // vga_output vga_output(
-    //     .clk                    (pclk),
-    //     .rst_n                  (reset),
-    //     .display_en             (vga_unit_display_en),
-    //     .x                      (vga_unit_x),
-    //     .y                      (vga_unit_y),
-    //     .vga_write_enable       (vgactrl),
-    //     .vga_store_data         (write_data),
-    //     .issue_type             (3'b000),
-    //     .switch_enable          (1'b0),
-    //     .vga_rgb                (vga_signal)
-    // );
-
-    // vga1 vga(
-    //     .clk(pclk),
-    //     .rst_n(reset),
-    //     .state(1),
-    //     .hsync(hsync),
-    //     .vsync(vsync),
-    //     .vga_rgb(vga_signal)
-    //     );
+    memory32 mem(
+    .clock(cpu_clk),
+    .memWrite(cache_rw),
+    .address(cache_addr),
+    .writeData(cache_writedata),
+    .readData(cache_readdata),
+    .m_strobe(cache_strobe),
+    .m_ready(m_ready),
+    .upg_rst_i(upg_rst),       //通信模式的复位信号，高电平有效
+    .upg_clk_i(upg_clk_o),      //通信模式的时钟
+    .upg_wen_i(upg_wen_o & upg_adr_o[14]), //通信模式往数据memory写入的使能
+    .upg_adr_i(upg_adr_o[13:0]),    //通信模式时要写入的地址
+    .upg_dat_i(upg_dat_o),          //通信模式时要写入的数据
+    .upg_done_i(upg_done_o)     //是否完成写入
+    );
 
 endmodule

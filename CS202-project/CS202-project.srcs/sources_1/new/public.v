@@ -6,6 +6,8 @@
 `define Disable 1'b0
 
 // Minisys Parameters
+`define ZeroByte 8'h00
+`define ZeroHalfWord 16'h0000 
 `define ZeroWord 32'h00000000 // 0x0字
 `define RegCount 32 // 寄存器数
 `define RegCountLog2 5 // 寄存器数Log2
@@ -62,98 +64,27 @@
 // NOP
 `define OP_NOP 6'b000000
 
-//----------------------------ISA Specifications--------------------------------//
-`define ISA_WIDTH           32                  // width of a word in the ISA
-`define STAGE_CNT           5
-`define STAGE_CNT_WIDTH     3                   // stage count width 5 <= 2^3
-`define ADDRESS_WIDTH       26                  // address lenth of instructions for j and jal extension
-`define SHIFT_AMOUNT_WIDTH  5
-`define JAL_REG_IDX         31
-`define IMMEDIATE_WIDTH     16
-`define REG_FILE_ADDR_WIDTH 5                   // width of register address(idx)
-`define OP_CODE_WIDTH       6                   // width of oepration code
-`define FUNC_CODE_WIDTH     6                   // width of function code
-//------------------------------------------------------------------------------//
+//IO
+`define IO_ADDR 22'h3FFFFF
+`define SPECIAL_LED 32'hffff_fc58
+`define LOW8_LED 32'hffff_fc60
+`define HIGH8_LED 32'hffff_fc62
+`define SEG 32'hffff_fc66
+`define TESTCASE 32'hffff_fc68
+`define A 32'hffff_fc70
+`define B 32'hffff_fc72
+`define CONFIRM 32'hffff_fc74
 
-//---------------------------------Memory---------------------------------------//
-`define RAM_DEPTH           14                  // ram size = 2^RAM_DEPTH words
-`define ROM_DEPTH           14                  // rom size = 2^ROM_DEPTH words
-`define PC_MAX_VALUE        16_383              // ((1 << (`DEFAULT_ROM_DEPTH + 2)) - 1)
+//decoder
+`define IO_BEGIN 32'hFFFFF000
+`define SP_BEGIN 32'h00010000
+`define ZERO_DECO 5'b00000
+`define RA_DECO 5'b11111
 
-`define MEM_WRITE_BIT       0                   // bit for determining memory write enable
-`define MEM_READ_BIT        1                   // bit for determining memory read enable
-
-`define IO_START_BIT        10                  // lowest bit of memory_mapped IO address
-`define IO_END_BIT          31                  // highest bit of memory-mapped IO address
-`define IO_TYPE_BIT         4                   // bit for determining IO type
-//------------------------------------------------------------------------------//
-
-//---------------------------------Control--------------------------------------//
-`define OP_CODE_WIDTH       6                   // width of oepration code
-`define FUNC_CODE_WIDTH     6                   // width of function code
-
-`define OP_SLL              6'b00_0000
-`define OP_SRL              6'b00_0010
-`define OP_SLLV             6'b00_0100
-`define OP_SRLV             6'b00_0110
-`define OP_SRA              6'b00_0011
-`define OP_SRAV             6'b00_0111
-//------------------------------------------------------------------------------//
-
-
-// values of issue_type 
-`define ISSUE_TYPE_WIDTH    3
-`define ISSUE_NONE          3'b000
-`define ISSUE_DATA          3'b001
-`define ISSUE_CONTROL       3'b010              // not handled by hazard_unit (determined after negedge with pc_abnormal in if_id_reg)
-`define ISSUE_UART          3'b011              // during uart transmission only
-`define ISSUE_PAUSE         3'b100
-`define ISSUE_VGA           3'b101              // not handled by hazard_unit (as this typically holds only for a few cycles)
-`define ISSUE_KEYPAD        3'b110
-`define ISSUE_FALLTHROUGH   3'b111              // the next instruction address exceeds `PC_MAX_VALUE 
-//------------------------------------------------------------------------------//
-
-//---------------------------------Clocks---------------------------------------//
-`define KEYPAD_DELAY_PERIOD 250_000             // for keypad_unit to scan every 0.25s (0.25s needed to confirm the key)
-
-`define VGA_BIT_DEPTH       12                  // VGA color depth
-
-// VGA display parameters
-`define DISPLAY_WIDTH       640
-`define DISPLAY_HEIGHT      480
-`define COORDINATE_WIDTH    10                  // width of coordinate value
-`define LEFT_BORDER         48
-`define RIGHT_BORDER        16
-`define TOP_BORDER          33
-`define BOTTOM_BORDER       10
-`define HORIZONTAL_GAP      96                  // horizontal gap duration
-`define VERTICAL_GAP        2                   // vertical gap duration
-
-// VGA colors
-`define BG_COLOR            12'b110111011101    // light gray
-`define DIGITS_BOX_BG_COLOR 12'b110011001100    // dark gray
-
-// VGA display asset parameters
-`define DIGITS_BOX_WIDTH    492
-`define DIGITS_BOX_HEIGHT   40
-`define DIGITS_BOX_X        74
-`define DIGITS_BOX_Y        215
-
-`define DIGITS_WIDTH        468
-`define DIGITS_W_WIDTH      9                   // width of width 468 <= 2^9
-`define DIGITS_HEIGHT       16
-`define DIGITS_X            86
-`define DIGITS_Y            227
-`define DIGITS_IDX_WIDTH    6                   // number of digits 39 + 7 <= 2^6
-
-`define DIGIT_WIDTH         12
-`define DIGIT_W_WIDTH       4                   // width of width 12 <= 2^4
-`define DIGIT_H_WIDTH       4                   // width of height 16 <= 2^4
-
-`define STATUS_WIDTH        88
-`define STATUS_W_WIDTH      7                   // width of width 88 <= 2^7
-`define STATUS_HEIGHT       22
-`define STATUS_H_WIDTH      5                   // width of height 22 <= 2^5
-`define STATUS_X            291
-`define STATUS_Y            180
-//------------------------------------------------------------------------------//
+//keypad
+`define NO_KEY_PRESSED 6'b000_001
+`define SCAN_COL0  6'b000_010
+`define SCAN_COL1 6'b000_100
+`define SCAN_COL2 6'b001_000
+`define SCAN_COL3 6'b010_000
+`define KEY_PRESSED 6'b100_000
